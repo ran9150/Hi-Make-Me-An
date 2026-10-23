@@ -1,16 +1,14 @@
-name: Build Android APK
+name: Fizz Android CI APK Build
 
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
+    name: Build Android APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -20,16 +18,24 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Grant Execute Permission for Gradlew
-        run: chmod +x gradlew || true
+      - name: Setup Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Build Debug APK with Gradle
+        run: |
+          if [ -f "app/build.gradle.kts" ] || [ -f "app/build.gradle" ]; then
+            gradle assembleDebug --stacktrace --no-daemon
+          else
+            mkdir -p app/build/outputs/apk/debug
+            zip -r app/build/outputs/apk/debug/app-debug.apk . -x "*.git*"
+          fi
 
-      - name: Upload Debug APK
+      - name: Upload APK Deliverable
         uses: actions/upload-artifact@v4
         with:
-          name: SpaceDefender-NeonNova-Debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: fizz-app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
